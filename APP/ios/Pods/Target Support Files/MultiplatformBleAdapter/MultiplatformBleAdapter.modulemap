@@ -1,0 +1,6 @@
+framework module MultiplatformBleAdapter {
+  umbrella header "MultiplatformBleAdapter-umbrella.h"
+
+  export *
+  module * { export * }
+}

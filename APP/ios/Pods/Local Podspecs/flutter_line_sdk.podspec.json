@@ -1,0 +1,34 @@
+{
+  "name": "flutter_line_sdk",
+  "version": "2.3.3",
+  "summary": "A Flutter plugin for using the LINE SDKs with Dart in Flutter apps.",
+  "description": "A Flutter plugin using the LINE SDKs with Dart in Flutter apps.",
+  "homepage": "https://developers.line.biz",
+  "license": {
+    "file": "../LICENSE"
+  },
+  "authors": {
+    "LINE": "dl_linesdk_cocoapods@linecorp.com"
+  },
+  "source": {
+    "path": "."
+  },
+  "source_files": "Classes/**/*",
+  "public_header_files": "Classes/**/*.h",
+  "dependencies": {
+    "Flutter": [
+
+    ],
+    "LineSDKSwift": [
+      "~> 5.3"
+    ]
+  },
+  "swift_versions": [
+    "4.2",
+    "5.0"
+  ],
+  "platforms": {
+    "ios": "11.0"
+  },
+  "swift_version": "5.0"
+}

@@ -1,0 +1,11 @@
+${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh
+${BUILT_PRODUCTS_DIR}/LineSDKSwift/LineSDK.framework
+${BUILT_PRODUCTS_DIR}/MultiplatformBleAdapter/MultiplatformBleAdapter.framework
+${BUILT_PRODUCTS_DIR}/flutter_ble_lib_ios_15/flutter_ble_lib_ios_15.framework
+${BUILT_PRODUCTS_DIR}/flutter_line_sdk/flutter_line_sdk.framework
+${BUILT_PRODUCTS_DIR}/flutter_native_splash/flutter_native_splash.framework
+${BUILT_PRODUCTS_DIR}/network_info_plus/network_info_plus.framework
+${BUILT_PRODUCTS_DIR}/sensors_plus/sensors_plus.framework
+${BUILT_PRODUCTS_DIR}/shared_preferences_foundation/shared_preferences_foundation.framework
+${BUILT_PRODUCTS_DIR}/uni_links/uni_links.framework
+${BUILT_PRODUCTS_DIR}/url_launcher_ios/url_launcher_ios.framework

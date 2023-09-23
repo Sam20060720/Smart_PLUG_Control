@@ -1,0 +1,84 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_ble_lib_ios_15 (2.4.1):
+    - Flutter
+    - MultiplatformBleAdapter (~> 0.1.9)
+  - flutter_line_sdk (2.3.3):
+    - Flutter
+    - LineSDKSwift (~> 5.3)
+  - flutter_native_splash (0.0.1):
+    - Flutter
+  - LineSDKSwift (5.10.0):
+    - LineSDKSwift/Core (= 5.10.0)
+  - LineSDKSwift/Core (5.10.0)
+  - MultiplatformBleAdapter (0.1.9)
+  - network_info_plus (0.0.1):
+    - Flutter
+  - permission_handler_apple (9.1.1):
+    - Flutter
+  - sensors_plus (0.0.1):
+    - Flutter
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - uni_links (0.0.1):
+    - Flutter
+  - url_launcher_ios (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_ble_lib_ios_15 (from `.symlinks/plugins/flutter_ble_lib_ios_15/ios`)
+  - flutter_line_sdk (from `.symlinks/plugins/flutter_line_sdk/ios`)
+  - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
+  - network_info_plus (from `.symlinks/plugins/network_info_plus/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+  - sensors_plus (from `.symlinks/plugins/sensors_plus/ios`)
+  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - uni_links (from `.symlinks/plugins/uni_links/ios`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+
+SPEC REPOS:
+  trunk:
+    - LineSDKSwift
+    - MultiplatformBleAdapter
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_ble_lib_ios_15:
+    :path: ".symlinks/plugins/flutter_ble_lib_ios_15/ios"
+  flutter_line_sdk:
+    :path: ".symlinks/plugins/flutter_line_sdk/ios"
+  flutter_native_splash:
+    :path: ".symlinks/plugins/flutter_native_splash/ios"
+  network_info_plus:
+    :path: ".symlinks/plugins/network_info_plus/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+  sensors_plus:
+    :path: ".symlinks/plugins/sensors_plus/ios"
+  shared_preferences_foundation:
+    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  uni_links:
+    :path: ".symlinks/plugins/uni_links/ios"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
+
+SPEC CHECKSUMS:
+  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  flutter_ble_lib_ios_15: 6c856306f784bcb94f3e1ca2fc4834f865925d25
+  flutter_line_sdk: c254a742230d4360cd4bb62b4b272be62287a618
+  flutter_native_splash: 52501b97d1c0a5f898d687f1646226c1f93c56ef
+  LineSDKSwift: af3be3b3eb8b408ff0f0de22c85a45df453cb0b9
+  MultiplatformBleAdapter: 5a6a897b006764392f9cef785e4360f54fb9477d
+  network_info_plus: 122280582fe2fa2bbb8681a4269745cd5c3a9b32
+  permission_handler_apple: e76247795d700c14ea09e3a2d8855d41ee80a2e6
+  sensors_plus: bda64198ccc7d3ccbb49e6ae17d92f67687bee20
+  shared_preferences_foundation: 5b919d13b803cadd15ed2dc053125c68730e5126
+  uni_links: d97da20c7701486ba192624d99bffaaffcfc298a
+  url_launcher_ios: 08a3dfac5fb39e8759aeb0abbd5d9480f30fc8b4
+
+PODFILE CHECKSUM: f0b608f529496acd2c73177bc54127d8d8c703a2
+
+COCOAPODS: 1.12.1

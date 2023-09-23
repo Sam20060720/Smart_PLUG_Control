@@ -1,0 +1,909 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smart_plug_control/httpreq.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:xen_popup_card/xen_card.dart';
+import 'package:switcher_xlive/switcher_xlive.dart';
+
+class plugDual extends StatefulWidget {
+  const plugDual({Key? key, required this.device}) : super(key: key);
+  final Device device;
+  @override
+  _plugDualState createState() => _plugDualState();
+}
+
+class _plugDualState extends State<plugDual> {
+  late double voltage = widget.device.rawdata['voltage'] == null ? 0.0 : widget.device.rawdata['voltage'].toDouble();
+  late double current1 = widget.device.rawdata['current1'] == null ? 0.0 : widget.device.rawdata['current1'].toDouble();
+  late double current2 = widget.device.rawdata['current2'] == null ? 0.0 : widget.device.rawdata['current2'].toDouble();
+  late double temp = widget.device.rawdata['temp'] == null ? 0.0 : widget.device.rawdata['temp'].toDouble();
+  late bool switch1 = widget.device.rawdata['status'] == "0" || widget.device.rawdata['status'] == "2" ? true : false;
+  late bool switch2 = widget.device.rawdata['status'] == "0" || widget.device.rawdata['status'] == "3" ? true : false;
+
+  late bool serverError = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+        // When the child is tapped, show a snackbar.
+        onTap: () {
+          //show device page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => devicePage(
+                device: widget.device,
+                deviceCard: widget,
+              ),
+            ),
+          );
+        },
+        child: Container(
+            margin: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: Offset(0, 2),
+                  blurRadius: 4.0,
+                ),
+              ],
+            ),
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                child: Column(
+                  children: [
+                    Row(children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(5, 0, 0, 0),
+                            child: Text(
+                              widget.device.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          GestureDetector(
+                            child: Padding(padding: const EdgeInsets.fromLTRB(10, 0, 0, 0), child: Image.asset('assets/images/devices/plugdual.png', width: 80, height: 80)),
+                            onLongPress: () => {
+                              //pop icon drawer that has many icons
+                            },
+                          )
+                        ],
+                      ),
+                      const Spacer(
+                        flex: 1,
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(Icons.link),
+                              const SizedBox(width: 10),
+                              Text(
+                                widget.device.status,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(Icons.power),
+                              const SizedBox(width: 10),
+                              Text(
+                                (widget.device.status == "OFFLINE") ? "--" : '${voltage}V',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(Icons.thermostat),
+                              const SizedBox(width: 10),
+                              Text(
+                                (widget.device.status == "OFFLINE") ? "--" : '$temp℃',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.power),
+                        const SizedBox(width: 10),
+                        const Text(
+                          "插座1",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(
+                          flex: 1,
+                        ),
+                        const Icon(Icons.bolt),
+                        Text(
+                          (widget.device.status == "OFFLINE") ? "--" : '${(current1 * voltage * 0.001).toStringAsFixed(2)}W',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(
+                          flex: 1,
+                        ),
+                        SwitcherXlive(
+                          value: switch1,
+                          onChanged: (value) {
+                            if (widget.device.status != "OFFLINE") {
+                              if (value) {
+                                if (switch2) {
+                                  HttpReq().setStat(widget.device.token, "2").then((value) {
+                                    setState(() {});
+                                  });
+                                } else {
+                                  HttpReq().setStat(widget.device.token, "1").then((value) {
+                                    setState(() {});
+                                  });
+                                }
+                              } else {
+                                if (switch2) {
+                                  HttpReq().setStat(widget.device.token, "3").then((value) {
+                                    setState(() {});
+                                  });
+                                } else {
+                                  HttpReq().setStat(widget.device.token, "0").then((value) {
+                                    setState(() {});
+                                  });
+                                }
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.power),
+                        const SizedBox(width: 10),
+                        const Text(
+                          "插座2",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(
+                          flex: 1,
+                        ),
+                        const Icon(Icons.bolt),
+                        Text(
+                          (widget.device.status == "OFFLINE") ? "--" : '${(current2 * voltage * 0.001).toStringAsFixed(2)}W',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(
+                          flex: 1,
+                        ),
+                        SwitcherXlive(
+                          value: switch2,
+                          onChanged: (value) {
+                            if (widget.device.status != "OFFLINE") {
+                              if (value) {
+                                if (switch1) {
+                                  HttpReq().setStat(widget.device.token, "1").then((value) {
+                                    setState(() {});
+                                  });
+                                } else {
+                                  HttpReq().setStat(widget.device.token, "2").then((value) {
+                                    setState(() {});
+                                  });
+                                }
+                              } else {
+                                if (switch1) {
+                                  HttpReq().setStat(widget.device.token, "0").then((value) {
+                                    setState(() {});
+                                  });
+                                } else {
+                                  HttpReq().setStat(widget.device.token, "3").then((value) {
+                                    setState(() {});
+                                  });
+                                }
+                              }
+                            }
+                          },
+                          //disabled
+                        ),
+                      ],
+                    ),
+                    //build two switches
+                  ],
+                ))));
+  }
+}
+
+class plugTemp extends StatefulWidget {
+  const plugTemp({Key? key, required this.device}) : super(key: key);
+
+  final Device device;
+
+  @override
+  _plugTempState createState() => _plugTempState();
+}
+
+class _plugTempState extends State<plugTemp> {
+  late double voltage = widget.device.rawdata['voltage'] == null ? 0.0 : widget.device.rawdata['voltage'].toDouble();
+  late double current1 = widget.device.rawdata['current1'] == null ? 0.0 : widget.device.rawdata['current1'].toDouble();
+  late double temp = widget.device.rawdata['temp'] == null ? 0.0 : widget.device.rawdata['temp'].toDouble();
+  late bool switch1 = widget.device.rawdata['status'] == "0" || widget.device.rawdata['status'] == "2" ? true : false;
+  late double humi = widget.device.rawdata['humi'] == null ? 0.0 : widget.device.rawdata['humi'].toDouble();
+  late double tempPLUG = widget.device.rawdata['tempPLUG'] == null ? 0.0 : widget.device.rawdata['tempPLUG'].toDouble();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        margin: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              offset: Offset(0, 2),
+              blurRadius: 4.0,
+            ),
+          ],
+        ),
+        child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+            child: Column(
+              children: [
+                Row(children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(5, 0, 0, 0),
+                        child: Text(
+                          widget.device.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      GestureDetector(
+                        child: Padding(padding: const EdgeInsets.fromLTRB(10, 0, 0, 0), child: Image.asset('assets/images/devices/plugtemp.png', width: 80, height: 80)),
+                        onLongPress: () => {
+                          //pop icon drawer that has many icons
+                        },
+                      )
+                    ],
+                  ),
+                  const Spacer(
+                    flex: 1,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          (widget.device.status == "OFFLINE") ? const Icon(Icons.link_off) : const Icon(Icons.link),
+                          const SizedBox(width: 10),
+                          Text(
+                            widget.device.status,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.power),
+                          const SizedBox(width: 10),
+                          Text(
+                            (widget.device.status == "OFFLINE") ? "--" : '${voltage}V',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.thermostat),
+                          const SizedBox(width: 10),
+                          Text(
+                            (widget.device.status == "OFFLINE") ? "--" : '$tempPLUG℃',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Spacer(
+                      flex: 1,
+                    ),
+                    const FaIcon(
+                      FontAwesomeIcons.temperatureQuarter,
+                      size: 18,
+                    ),
+                    const SizedBox(
+                      width: 5,
+                    ),
+                    Text(
+                      (widget.device.status == "OFFLINE") ? "--" : '$temp℃',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(
+                      flex: 2,
+                    ),
+                    const FaIcon(
+                      FontAwesomeIcons.droplet,
+                      size: 18,
+                    ),
+                    SizedBox(
+                      width: 5,
+                    ),
+                    Text(
+                      (widget.device.status == "OFFLINE") ? "--" : '$humi%',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(
+                      flex: 1,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.power),
+                    const SizedBox(width: 10),
+                    const Text(
+                      "插座",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(
+                      flex: 1,
+                    ),
+                    const Icon(Icons.bolt),
+                    Text(
+                      (widget.device.status == "OFFLINE") ? "--" : '${(current1 * voltage * 0.001).toStringAsFixed(2)}W',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(
+                      flex: 1,
+                    ),
+                    SwitcherXlive(
+                      value: switch1,
+                      onChanged: (value) {
+                        if (widget.device.status != "OFFLINE") {
+                          if (value) {
+                            HttpReq().setStat(widget.device.token, "1").then((value) {
+                              setState(() {});
+                            });
+                          } else {
+                            HttpReq().setStat(widget.device.token, "0").then((value) {
+                              setState(() {});
+                            });
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            )));
+  }
+}
+
+class devicePage extends StatefulWidget {
+  const devicePage({Key? key, required this.device, required this.deviceCard}) : super(key: key);
+
+  final Device device;
+  final Widget deviceCard;
+
+  @override
+  _devicePageState createState() => _devicePageState();
+}
+
+class _devicePageState extends State<devicePage> {
+  bool showAvg = false;
+  int nowfhartpage = 0;
+  late Timer timer;
+
+  late List<Map<dynamic, dynamic>> statusHistoryMap = widget.device.rawdata['status_history'] ?? [];
+
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      // update device status
+      HttpReq().getStat(widget.device.token).then((devstat) {
+        if (devstat == "SERVER ERROR") {
+          setState(() {
+            widget.device.status = "OFFLINE";
+          });
+        } else {
+          setState(() {
+            if (devstat.runtimeType != String) {
+              widget.device.rawdata = devstat;
+              widget.device.status = "ONLINE";
+              // voltage = widget.device.rawdata['voltage'] == null ? 0.0 : widget.device.rawdata['voltage'].toDouble();
+              // current1 = widget.device.rawdata['current1'] == null ? 0.0 : widget.device.rawdata['current1'].toDouble();
+              // current2 = widget.device.rawdata['current2'] == null ? 0.0 : widget.device.rawdata['current2'].toDouble();
+              // temp = widget.device.rawdata['temp'] == null ? 0.0 : widget.device.rawdata['temp'].toDouble();
+              // switch1 = widget.device.rawdata['status'] == "0" || widget.device.rawdata['status'] == "2" ? true : false;
+              // switch2 = widget.device.rawdata['status'] == "0" || widget.device.rawdata['status'] == "3" ? true : false;
+            } else {
+              widget.device.status = "OFFLINE";
+            }
+          });
+        }
+      });
+      testadd();
+    });
+  }
+
+  List<FlSpot> genSpotFromHistory(String key) {
+    List<FlSpot> spots = [];
+    for (int i = 0; i < statusHistoryMap.length; i++) {
+      // spots.add(FlSpot(i.toDouble(), Random().nextInt(9).toDouble()));
+      spots.add(FlSpot(i.toDouble(), statusHistoryMap[i][key].toDouble()));
+    }
+    //fill to 11 points
+    for (int i = spots.length; i < 11; i++) {
+      spots.add(FlSpot(i.toDouble(), 0));
+    }
+    return spots;
+  }
+
+  void testadd() {
+    Map<String, dynamic> test = {"voltage": Random().nextInt(9).toDouble() + 1};
+    statusHistoryMap.add(test);
+    if (statusHistoryMap.length == 5) {
+      statusHistoryMap.removeAt(0);
+    }
+  }
+
+  final _controller = PageController(
+    initialPage: 0,
+  );
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+    timer.cancel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(0, 255, 255, 255),
+        elevation: 0, // 1
+        centerTitle: true,
+        title: Text(
+          widget.device.name,
+          style: const TextStyle(
+            color: Color.fromARGB(255, 0, 169, 215), // 2
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color.fromARGB(255, 0, 169, 215)),
+          onPressed: () {
+            //jump to register new
+            Navigator.pop(context);
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Color.fromARGB(255, 0, 169, 215)),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (builder) => XenPopupCard(
+                  gutter: XenCardGutter(
+                    child: Padding(
+                        padding: const EdgeInsets.all(3.0),
+                        child: IconButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              color: Color.fromARGB(255, 0, 169, 215),
+                              size: 20,
+                            ))),
+                  ),
+                  body: ListView(
+                    children: const [
+                      Text("body"),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        child: Column(
+          children: [
+            widget.deviceCard,
+            Container(
+                margin: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      offset: Offset(0, 2),
+                      blurRadius: 4.0,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                            margin: const EdgeInsets.only(top: 5, bottom: 5, left: 5, right: 5),
+                            padding: const EdgeInsets.only(top: 5, bottom: 5, left: 10, right: 10),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color.fromARGB(255, 0, 0, 0),
+                                  offset: Offset(0, 0),
+                                  blurRadius: 1.0,
+                                ),
+                              ],
+                            ),
+                            child: Row(children: [
+                              Text(
+                                "瓦數",
+                                style: TextStyle(color: (nowfhartpage == 0 ? Colors.black : Colors.grey), fontSize: (nowfhartpage == 0 ? 25 : 10)),
+                              ),
+                              const SizedBox(
+                                width: 5,
+                              ),
+                              Text(
+                                "電壓",
+                                style: TextStyle(color: (nowfhartpage == 1 ? Colors.black : Colors.grey), fontSize: (nowfhartpage == 1 ? 25 : 10)),
+                              ),
+                              const SizedBox(
+                                width: 5,
+                              ),
+                              Text(
+                                "溫度",
+                                style: TextStyle(color: (nowfhartpage == 2 ? Colors.black : Colors.grey), fontSize: (nowfhartpage == 2 ? 25 : 10)),
+                              ),
+                            ])),
+                        Expanded(child: SizedBox()),
+                        Row(
+                          children: [
+                            Text("顯示平均值"),
+                            const SizedBox(
+                              width: 5,
+                            ),
+                            SwitcherXlive(
+                                unActiveColor: Colors.grey,
+                                activeColor: Colors.blue,
+                                value: showAvg,
+                                onChanged: ((value) => {
+                                      setState(() {
+                                        showAvg = value;
+                                      })
+                                    })),
+                          ],
+                        )
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    AspectRatio(
+                        aspectRatio: 1.5,
+                        child: PageView(
+                          onPageChanged: (int page) => {
+                            setState(() {
+                              nowfhartpage = page;
+                            })
+                          },
+                          controller: _controller,
+                          children: [
+                            LineChart(
+                              showAvg ? avgData() : mainData(genSpotFromHistory('voltage')),
+                            ),
+                            LineChart(
+                              showAvg ? avgData() : mainData(genSpotFromHistory('voltage')),
+                            ),
+                            LineChart(
+                              showAvg ? avgData() : mainData(genSpotFromHistory('voltage')),
+                            ),
+                          ],
+                        )),
+                  ],
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  LineChartData mainData(List<FlSpot> spots) {
+    return LineChartData(
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: true,
+        horizontalInterval: 1,
+        verticalInterval: 1,
+        getDrawingHorizontalLine: (value) {
+          return const FlLine(
+            // color: AppColors.mainGridLineColor,
+            color: Color.fromARGB(110, 0, 0, 0),
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return const FlLine(
+            // color: AppColors.mainGridLineColor,
+            color: Color.fromARGB(0, 255, 255, 255),
+
+            strokeWidth: 1,
+          );
+        },
+      ),
+      titlesData: const FlTitlesData(
+        show: true,
+        rightTitles: AxisTitles(
+            sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 5,
+        )),
+        topTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: false,
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          axisNameWidget: Text("時間(S)"),
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 30,
+          ),
+        ),
+        leftTitles: AxisTitles(
+          axisNameWidget: Text("瓦特(W)"),
+          sideTitles: SideTitles(
+            showTitles: true,
+            interval: 1,
+            reservedSize: 30,
+          ),
+        ),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: Border.all(color: const Color(0xff37434d)), //外匡線
+      ),
+      minX: 0,
+      minY: 0,
+      maxY: 9,
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots,
+          isCurved: true,
+
+          color: const Color.fromARGB(255, 18, 104, 174),
+          // gradient: ,
+          // LinearGradient(
+          //   colors: [
+          //     Color(0xff23b6e6),
+          //     Color(0xff23b6e6),
+          //   ],
+          // ),
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(
+            show: false,
+          ),
+          belowBarData: BarAreaData(
+            show: false,
+            // gradient: LinearGradient(colors: [
+            //   Color(0xff23b6e6).withOpacity(0.3),
+            //   Color(0xff02d39a).withOpacity(0.3),
+            // ]),
+          ),
+        ),
+        // LineChartBarData(
+        //   spots: const [
+        //     FlSpot(0, 5),
+        //     FlSpot(2.6, 1),
+        //     FlSpot(4.9, 3),
+        //     FlSpot(6.8, 6),
+        //     FlSpot(8, 7),
+        //     FlSpot(9.5, 8),
+        //     FlSpot(11, 3),
+        //   ],
+        //   isCurved: true,
+        //   // color: Color.fromARGB(255, 234, 122, 18),
+        //   gradient: LinearGradient(
+        //     colors: [
+        //       Color.fromARGB(255, 2, 211, 145),
+        //       Color.fromARGB(255, 5, 103, 207),
+        //     ],
+        //   ),
+        //   barWidth: 3,
+        //   isStrokeCapRound: true,
+        //   dotData: const FlDotData(
+        //     show: false,
+        //   ),
+        //   belowBarData: BarAreaData(
+        //     show: false,
+        //   ),
+        // ),
+      ],
+    );
+  }
+
+  LineChartData avgData() {
+    return LineChartData(
+      lineTouchData: const LineTouchData(enabled: false),
+      gridData: FlGridData(
+        show: true,
+        drawHorizontalLine: true,
+        verticalInterval: 1,
+        horizontalInterval: 1,
+        getDrawingVerticalLine: (value) {
+          return const FlLine(
+            color: Color(0xff37434d),
+            strokeWidth: 1,
+          );
+        },
+        getDrawingHorizontalLine: (value) {
+          return const FlLine(
+            color: Color(0xff37434d),
+            strokeWidth: 1,
+          );
+        },
+      ),
+      titlesData: FlTitlesData(
+        show: true,
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 30,
+            interval: 1,
+          ),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 42,
+            interval: 1,
+          ),
+        ),
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: Border.all(color: const Color(0xff37434d)),
+      ),
+      minX: 0,
+      maxX: 11,
+      minY: 0,
+      maxY: 6,
+      lineBarsData: [
+        LineChartBarData(
+          spots: const [
+            FlSpot(0, 3.44),
+            FlSpot(2.6, 3.44),
+            FlSpot(4.9, 3.44),
+            FlSpot(6.8, 3.44),
+            FlSpot(8, 3.44),
+            FlSpot(9.5, 3.44),
+            FlSpot(11, 3.44),
+          ],
+          isCurved: true,
+          gradient: const LinearGradient(colors: [
+            const Color(0xff23b6e6),
+            const Color(0xff02d39a),
+          ]),
+          barWidth: 5,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(
+            show: false,
+          ),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              colors: [
+                // ColorTween(begin: gradientColors[0], end: gradientColors[1]).lerp(0.2)!.withOpacity(0.1),
+                // ColorTween(begin: gradientColors[0], end: gradientColors[1]).lerp(0.2)!.withOpacity(0.1),
+                const Color(0xff23b6e6).withOpacity(0.1),
+                const Color(0xff02d39a).withOpacity(0.1),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

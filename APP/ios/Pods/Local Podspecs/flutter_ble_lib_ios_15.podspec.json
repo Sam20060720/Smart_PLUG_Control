@@ -1,0 +1,35 @@
+{
+  "name": "flutter_ble_lib_ios_15",
+  "version": "2.4.1",
+  "summary": "A new flutter plugin project.",
+  "description": "A new flutter plugin project.",
+  "homepage": "http://example.com",
+  "license": {
+    "file": "../LICENSE"
+  },
+  "authors": {
+    "Your Company": "email@example.com"
+  },
+  "source": {
+    "path": "."
+  },
+  "source_files": "Classes/**/*",
+  "public_header_files": "Classes/**/*.h",
+  "dependencies": {
+    "Flutter": [
+
+    ],
+    "MultiplatformBleAdapter": [
+      "~> 0.1.9"
+    ]
+  },
+  "swift_versions": [
+    "4.0",
+    "4.2",
+    "5.0"
+  ],
+  "platforms": {
+    "ios": "8.0"
+  },
+  "swift_version": "5.0"
+}
