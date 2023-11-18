@@ -1,47 +1,62 @@
-from flask import Flask,render_template,request,jsonify
+from flask import Flask, render_template, request, jsonify, url_for, redirect, session
 import database
 import config
 import objects
 import random
 import json
 import time
+import linenotify
+from datetime import datetime, timedelta
+from GLOBAL import *
+from web import webapp
+import util
 
 app = Flask("App")
+app.register_blueprint(webapp, url_prefix='/')
+
 app.config['SECRET_KEY'] = config.SECRET_KEY
 connectDevice = dict()
 reqtoken = dict()
 
-@app.route("/api/register",methods=["POST"])
+db = database.database('firebase.json', True)
+
+
+@app.route("/api/register", methods=["POST"])
 def register():
     gettoken = request.form.get('token')
-    getname = request.form.get('name')
+    print(gettoken)
     gettype = request.form.get('type')
-    print(gettoken,getname,gettype)
-    if gettoken == None or getname == None or gettype == None or len(gettoken) == 0 or len(getname) == 0 or len(gettype) == 0:
+    if gettoken == None or gettype == None or len(gettoken) == 0 or len(gettype) == 0:
         return "error"
     else:
-        if database.getDevice(gettoken) == None:
+        if db.getDevice(gettoken) == None:
             if gettype not in objects.devicestatus:
-                print("error(unknown type)")
+                print(f"{gettoken} error(unknown type)")
                 return "error(unknown type)"
-            database.registerDevice(gettoken,getname,gettype)
-            connectDevice[gettoken] = database.getDevice(gettoken)
-            connectDevice[gettoken].timeupdate()
-            print("register success")
-            return "success"
-        else:
-            connectDevice[gettoken] = database.getDevice(gettoken)
-            connectDevice[gettoken].timeupdate()
-            print("registed")
-            return "registed"
-    return "error" #unknow error
 
-@app.route('/api/gentoken',methods=["GET"])
+            db.registerDevice(gettoken, gettype)
+            connectDevice[gettoken] = db.getDevice(gettoken)
+            connectDevice[gettoken].timeupdate()
+            db.updateDeviceLogs(
+                gettoken, 0,  connectDevice[gettoken].status, "Register to Server")
+            print(f"{gettoken} Connect to Server")
+            return getdevice()
+        else:
+            if connectDevice.get(gettoken) == None:
+                connectDevice[gettoken] = db.getDevice(gettoken)
+                connectDevice[gettoken].timeupdate()
+                db.updateDeviceLogs(
+                    gettoken, 0,  connectDevice[gettoken].status, "Connected to Server")
+                print(f"{gettoken} Register to Server")
+            return getdevice()
+
+
+@app.route('/api/gentoken', methods=["GET"])
 def genkey():
     return objects.genToken()
 
 
-@app.route("/api/setstat",methods=["POST"])
+@app.route("/api/setstat", methods=["POST"])
 def setstat():
     gettoken = request.form.get('token')
     getstatus = request.form.get('status')
@@ -49,13 +64,21 @@ def setstat():
         return "error"
     else:
         if gettoken not in list(connectDevice):
-            return "error(not connected)"
+            return "error (not connected)"
         else:
+            getstatus = int(getstatus)
+            # check status is valid
+            objects.devicestatus[connectDevice[gettoken].type][getstatus]
+            stat_from = objects.devicestatus[connectDevice[gettoken]
+                                             .type][connectDevice[gettoken].status]
+            stat_to = objects.devicestatus[connectDevice[gettoken].type][getstatus]
+            db.updateDeviceLogs(
+                gettoken, 1, connectDevice[gettoken].status, f"Status From {stat_from}({connectDevice[gettoken].status}) To {stat_to}({getstatus})")
             connectDevice[gettoken].update(getstatus)
-            database.updateDevice(gettoken,connectDevice[gettoken].name,getstatus)
             return "success"
 
-@app.route("/api/reqdigit",methods=["POST"])
+
+@app.route("/api/reqdigit", methods=["POST"])
 def reqdigit():
     gettoken = request.form.get('token')
     if gettoken == None or len(gettoken) == 0:
@@ -64,17 +87,20 @@ def reqdigit():
         if gettoken not in list(connectDevice):
             return "error(not connected)"
         else:
-            getdigit = random.randint(100000,999999)
+            getdigit = random.randint(100000, 999999)
             for i in reqtoken:
                 if reqtoken[i][0] == gettoken:
                     del reqtoken[i]
-                    reqtoken[getdigit] = (gettoken,objects.getNowTime())
+                    reqtoken[getdigit] = (gettoken, objects.getNowTime())
                     return str(getdigit)
+            # db.updateDeviceLogs(devicetoken, 0,  connectDevice[devicetoken].status, "Request Token")
+
             connectDevice[gettoken].timeupdate()
-            reqtoken[getdigit] = (gettoken,objects.getNowTime())
+            reqtoken[getdigit] = (gettoken, objects.getNowTime())
             return str(getdigit)
 
-@app.route("/api/reqtoken",methods=["POST"])
+
+@app.route("/api/reqtoken", methods=["POST"])
 def reqtokenf():
     getcode = request.form.get('code')
     if getcode == None or len(getcode) == 0:
@@ -88,27 +114,18 @@ def reqtokenf():
             return "error not in list"
         else:
             gettoken = reqtoken[getcode][0]
-            while True:
-                try:
-                    tempdev = database.getDevice(gettoken)
-                    break
-                except:
-                    time.sleep(0.1) 
+            tempdev = db.getDevice(gettoken)
             retdict = {
-                "token":str(gettoken),
-                "name":str(tempdev.name),
-                "type":str(tempdev.type),
-                "id" :str( tempdev.id),
-                "addtime":str( tempdev.addtime),
-                "lastupdate" :str( tempdev.lastupdate),
-                "status":str(tempdev.status)
+                "token": str(gettoken),
+                "type": str(tempdev.type),
+                "lastupdate": str(tempdev.lastupdate),
+                "status": str(tempdev.status),
+                'setting': tempdev.setting
             }
             return jsonify(retdict)
-            
-            
 
-    
-@app.route("/api/getstat",methods=["POST"])
+
+@app.route("/api/getstat", methods=["POST"])
 def getstat():
     gettoken = request.form.get('token')
     if gettoken == None or len(gettoken) == 0:
@@ -117,16 +134,17 @@ def getstat():
         if gettoken not in list(connectDevice):
             return "error(not connected)"
         else:
+            try:
+                json_object = json.loads(connectDevice[gettoken].rawdata)
+                json_object["status"] = connectDevice[gettoken].status
+                json_object["status_history"] = connectDevice[gettoken].rawdata_history[0:10]
+            except:
+                return "empty"
+
+            return jsonify(json_object)
 
 
-            json_object = json.loads(connectDevice[gettoken].rawdata)
-            #add status to json
-            json_object["status"] = connectDevice[gettoken].status
-            
-
-            return jsonify(json_object) 
-
-@app.route("/api/update",methods=["POST"])
+@app.route("/api/update", methods=["POST"])
 def update():
     gettoken = request.form.get('token')
     getdata = request.form.get('data')
@@ -139,65 +157,199 @@ def update():
         else:
             connectDevice[gettoken].timeupdate()
             connectDevice[gettoken].rawdata = getdata
-            # print(getdata)
-            return connectDevice[gettoken].status
+            if len(connectDevice[gettoken].rawdata_history) <= 60:
+                connectDevice[gettoken].rawdata_history.append(getdata)
+            else:
+                connectDevice[gettoken].rawdata_history.pop(60)
+                connectDevice[gettoken].rawdata_history.insert(0, getdata)
 
-@app.route("/api/getdevice",methods=["POST"])
+            if connectDevice[gettoken].cache["datacount"] < 60:
+
+                connectDevice[gettoken].cache["datacount"] += 1
+            else:
+                history_list = []
+                average_history = {}
+
+                for hisi in connectDevice[gettoken].rawdata_history:
+                    hisi = json.loads(hisi)
+                    history_list.append(hisi)
+                    for item in objects.deviceCalc[connectDevice[gettoken].type]:
+                        if item not in average_history:
+                            average_history[item] = 0
+                        average_history[item] += hisi[item]
+
+                for item in objects.deviceCalc[connectDevice[gettoken].type]:
+                    average_history[item] /= len(history_list)
+                    average_history[item] = round(average_history[item], 2)
+
+                db.updateDeviceHistory(gettoken, average_history)
+                connectDevice[gettoken].cache["datacount"] = 0
+
+            if connectDevice[gettoken].cache["needupdate"]:
+                connectDevice[gettoken].cache["needupdate"] = False
+                return "UPD"
+
+            return str(connectDevice[gettoken].status)
+
+
+@app.route("/api/getdevice", methods=["POST"])
 def getdevice():
     gettoken = request.form.get('token')
     if gettoken == None or len(gettoken) == 0:
         return "error"
     else:
-        while True:
-            try:
-                tempdev = database.getDevice(gettoken)
-                break
-            
-            except:
-                time.sleep(0.1) 
-        retdict = {
-            "token":str(gettoken),
-            "name":str(tempdev.name),
-            "type":str(tempdev.type),
-            "id" :str( tempdev.id),
-            "addtime":str( tempdev.addtime),
-            "lastupdate" :str( tempdev.lastupdate),
-            "status":str(tempdev.status)
-        }
-        return jsonify(retdict)
+        tempdev = db.getDevice(gettoken)
+        if tempdev:
+            retdict = {
+                "token": str(gettoken),
+                "type": str(tempdev.type),
+                "lastupdate": str(tempdev.lastupdate),
+                "status": str(tempdev.status),
+                'setting': tempdev.setting
+            }
+            return jsonify(retdict)
+        else:
+            return "error"
+
+
+@app.route('/api/set', methods=["POST"])
+def setsetting():
+    gettoken = request.form.get('token')
+    device = db.getDevice(gettoken)
+    if device == None:
+        return "error"
+    settinglist = objects.deviceDefaultSetting[device.type].keys()
+    getsetting = {}
+    for setting in settinglist:
+        getrest = request.form.get(setting)
+        if getrest != None:
+            getsetting[setting] = getrest
+
+    if connectDevice.get(gettoken):
+        connectDevice[gettoken].cache["needupdate"] = True
+
+    if db.setDeviceSetting(gettoken, getsetting):
+        return "success"
+    else:
+        return "error"
+
+
+@app.route('/api/getsetting', methods=["POST"])
+def getsetting():
+    gettoken = request.form.get('token')
+    device = db.getDevice(gettoken)
+    if device == None:
+        return "error"
+    # db.getDeviceSetting
+    settinglist = objects.deviceDefaultSetting[device.type].keys()
+    getsetting = {}
+    for setting in settinglist:
+        getsetting[setting] = device.setting.get(setting)
+
+    return jsonify(getsetting)
+
+
+@app.route('/api/regline', methods=["POST"])
+def line_send():
+    user_mid = request.form.get('user_mid')
+    msg = request.form.get('msg')
+    device_token = request.form.get('device_token')
+    print(user_mid, msg, device_token)
+
+    linenotify.send_message_to_friend(user_mid, msg)
+    db.regLine(device_token, user_mid)
+
+    return "ok"
+
+
+@app.route('/api/unregline', methods=["POST"])
+def line_unreg():
+    device_token = request.form.get('device_token')
+    db.unregLine(device_token)
+
+    return "ok"
+
+
+@app.route('/api/gethistory', methods=["POST"])
+def getHistory():
+    gettoken = request.form.get('token')
+    start_date = request.form.get(
+        'startdate')
+    end_date = request.form.get(
+        'enddate')
+    if gettoken == None or start_date == None or end_date == None:
+        return "error"
+    else:
+        device = db.getDevice(gettoken)
+        if device == None:
+            return "error"
+        try:
+            start_date = int(start_date)
+            end_date = int(end_date)
+            print(start_date,end_date)
+
+        except:
+            return "error"
+
+        # to datetime
+        start_time = datetime.fromtimestamp(start_date)
+        end_time = datetime.fromtimestamp(end_date)
+        end_time = end_time + timedelta(days = 1)
+        start_time.replace(hour=0, minute=0, second=0)
+        end_time.replace(hour=23, minute=59, second=59)
+        time_range = (end_time - start_time).days 
+
+        
+
+        # to stamp
+        start_date_int = int(start_time.timestamp())
+        end_date_int = int(end_time.timestamp())
+
+        # 計算時間間隔數量
+        if time_range <= 5:
+            interval_size_seconds = 3600 * time_range  # 1小時 * 天數
+        else:
+            interval_size_seconds = int((end_date_int-start_date_int) / (24+abs(8 * (time_range - 5))))
+        
+        
+
+        history = db.getHistoryInRange(gettoken, start_date_int, end_date_int)
+        interval_averages = util.calculate_averages_in_intervals(
+            history, interval_size_seconds, start_time, end_time)
+
+        return jsonify({"history": interval_averages})
+
 
 @app.route('/api')
 def indexapi():
     return 'alive'
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 def updateDeviceStatus():
-    
     for devicetoken in list(connectDevice):
-        print(connectDevice[devicetoken].getdict())
         if connectDevice[devicetoken].istimeout():
             print('device: %s is timeout' % devicetoken)
-            del connectDevice[devicetoken]
-    
+            db.updateDeviceLogs(
+                devicetoken, 0,  connectDevice[devicetoken].status, "Connect Lost")
+            connectDevice.pop(devicetoken)
+
     for reqtokenid in list(reqtoken):
         if objects.getNowTime() - reqtoken[reqtokenid][1] > 60:
             print('reqtoken: %s is timeout' % reqtokenid)
             del reqtoken[reqtokenid]
 
 
-rt = objects.RepeatedTimer(10,updateDeviceStatus)
+def main():
+    rt = objects.RepeatedTimer(5, updateDeviceStatus)
+    if __name__ == "__main__":
+        try:
+            rt.start()
+            app.run("0.0.0.0", port=5000, debug=True)
+        finally:
+            rt.stop()
+            print("exit")
+            exit()
+
 
 if __name__ == "__main__":
-    try: 
-        rt.start()
-        app.run ("0.0.0.0",port=5000,debug=True)
-
-    finally:
-        print("finally")
-        rt.stop()
-        database.close()
-        print("exit")
-        exit()
+    main()

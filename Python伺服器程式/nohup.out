@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/mnt/NAS_Docker/codeserver/workspace/smart-plug-server/main.py", line 1, in <module>
+    from flask import Flask, render_template, request, jsonify, url_for, redirect, session
+ModuleNotFoundError: No module named 'flask'
+Traceback (most recent call last):
+  File "/mnt/NAS_Docker/codeserver/workspace/smart-plug-server/main.py", line 1, in <module>
+    from flask import Flask, render_template, request, jsonify, url_for, redirect, session
+ModuleNotFoundError: No module named 'flask'
